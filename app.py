@@ -1,62 +1,71 @@
-import pandas as pd
 import tkinter as tk
-from tkinter import messagebox
-from PIL import Image, ImageTk
+from tkinter import filedialog
+import pandas as pd
 
-class InteractiveBOMApp:
-    def __init__(self, master):
-        self.master = master
-        self.master.title("Interactive BoM and Assembly Guide")
+class FileSelectorApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("elProt Ibom")
 
-        # Load BoM data (replace 'your_bom.csv' with your actual file)
-        self.bom_data = pd.read_csv('your_bom.csv')
+        # Create variables to store file paths
+        self.csv_file_path = tk.StringVar()
+        self.png_file_path = tk.StringVar()
 
-        # Create GUI elements
-        self.bom_listbox = tk.Listbox(master)
-        self.bom_listbox.pack(side=tk.LEFT, fill=tk.BOTH)
+        # Create labels
+        tk.Label(root, text="Select CSV File:").pack(pady=5)
+        tk.Label(root, text="Select PNG File:").pack(pady=5)
 
-        self.assembly_frame = tk.Frame(master)
-        self.assembly_frame.pack(side=tk.RIGHT, fill=tk.BOTH)
+        # Create entry widgets to display file paths
+        tk.Entry(root, textvariable=self.csv_file_path, state='readonly').pack(pady=5)
+        tk.Entry(root, textvariable=self.png_file_path, state='readonly').pack(pady=5)
 
-        self.load_bom()
-        self.show_assembly_guide()
+        # Create buttons to open file dialogs
+        tk.Button(root, text="Browse CSV", command=self.browse_csv).pack(pady=5)
+        tk.Button(root, text="Browse PNG", command=self.browse_png).pack(pady=5)
 
-        # Bind events
-        self.bom_listbox.bind('<<ListboxSelect>>', self.show_assembly_guide)
+        # Create a button to proceed to the next step
+        tk.Button(root, text="Next", command=self.process_files).pack(pady=10)
 
-    def load_bom(self):
-        # Populate BoM listbox with product names
-        for index, row in self.bom_data.iterrows():
-            self.bom_listbox.insert(tk.END, row['Product'])
+    def browse_csv(self):
+        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+        self.csv_file_path.set(file_path)
 
-    def show_assembly_guide(self, event=None):
-        # Clear previous assembly guide
-        for widget in self.assembly_frame.winfo_children():
-            widget.destroy()
+    def browse_png(self):
+        file_path = filedialog.askopenfilename(filetypes=[("PNG files", "*.png")])
+        self.png_file_path.set(file_path)
 
-        # Get selected product
-        selected_index = self.bom_listbox.curselection()
-        if not selected_index:
-            return
+    def read_csv_with_warnings(self, csv_path):
+        try:
+            bom_data = pd.read_csv(csv_path)
+        except pd.errors.ParserError as e:
+            tk.messagebox.showwarning("Warning", f"Error reading CSV: {e}")
+            bom_data = pd.DataFrame()  # or None, depending on your use case
+        return bom_data
 
-        selected_product = self.bom_data.iloc[selected_index[0]]
+    def process_files(self):
+        # Get the selected file paths
+        csv_path = self.csv_file_path.get()
+        png_path = self.png_file_path.get()
 
-        # Display assembly information
-        assembly_label = tk.Label(self.assembly_frame, text=f"Assembly Guide for {selected_product['Product']}")
-        assembly_label.pack()
+        # Check if both files are selected
+        if csv_path and png_path:
+            # Read BOM data from CSV using a custom function
+            bom_data = self.read_csv_with_warnings(csv_path)
 
-        # Load and display assembly image (replace 'your_image.jpg' with your actual image)
-        image_path = 'your_image.jpg'
-        image = Image.open(image_path)
-        image = ImageTk.PhotoImage(image)
-        image_label = tk.Label(self.assembly_frame, image=image)
-        image_label.image = image
-        image_label.pack()
+            # Display BOM data (you can customize this part)
+            print("BOM Data:")
+            print(bom_data)
 
-        # Add more details as needed
+            # Perform your desired operations with BOM data and PNG file
 
-# Main program
+            # For example, display a message
+            tk.messagebox.showinfo("Success", "Files processed successfully!")
+
+        else:
+            # If either file is missing, show an error message
+            tk.messagebox.showerror("Error", "Please select both CSV and PNG files.")
+
 if __name__ == "__main__":
     root = tk.Tk()
-    app = InteractiveBOMApp(root)
+    app = FileSelectorApp(root)
     root.mainloop()
