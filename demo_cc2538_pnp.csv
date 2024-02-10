@@ -1,15 +1,3 @@
-Altium Designer Pick and Place Locations
-C:\Users\colin\Dropbox (NewAE Technology Inc)\engineering\git_repos\CW308T\CW308T_CC2538\NAE-CW308T-CC2538\OUTPUT\FILES\Pick Place\Pick Place for NPCB-CW308T-CC2538(Production of NAE-CW308T-CC2538).csv
-
-========================================================================================================================
-File Design Information:
-
-Date:       24/11/17
-Time:       09:12
-Revision:   Not in VersionControl
-Variant:    Production of NAE-CW308T-CC2538
-Units used: mm
-
 "Designator","Comment","Layer","Footprint","Center-X(mm)","Center-Y(mm)","Rotation","Description","Manufacture Part Number 1","Supplier Part Number 1"
 "R10","2k2","TopLayer","RESC1608X55N","39.6240","35.7750","90","2k2 res, 0603, 1%, 1/10W","RC0603FR-072K2L","311-2.20KHRCT-ND"
 "C18","1n","TopLayer","CAPC0603_M","38.9240","38.6080","180","1n, 0603","",""
