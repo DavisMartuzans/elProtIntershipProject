@@ -1,13 +1,14 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QFileDialog, QTreeWidget, QTreeWidgetItem, QMessageBox, QGraphicsView, QGraphicsScene
-from PyQt5.QtGui import QIcon, QPen, QColor
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QTreeWidget, QTreeWidgetItem, QMessageBox, QMenu, QAction, QHeaderView, QStatusBar
+from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtCore import Qt
 import pandas as pd
 
 class FileSelectorApp(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("elProt Ibom")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 1000, 600)  # Increased width and height
 
         self.csv_file_path = None
         self.png_file_path = None
@@ -15,51 +16,45 @@ class FileSelectorApp(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        layout = QVBoxLayout()
+        layout = QHBoxLayout()
 
         # File paths layout
-        file_paths_layout = QHBoxLayout()
+        file_paths_layout = QVBoxLayout()
         layout.addLayout(file_paths_layout)
 
-        csv_label = QLabel("Select CSV File:")
-        file_paths_layout.addWidget(csv_label)
-
-        self.csv_line_edit = QLineEdit()
-        self.csv_line_edit.setReadOnly(True)
-        file_paths_layout.addWidget(self.csv_line_edit)
-
         csv_button = QPushButton("Browse CSV")
+        csv_button.setToolTip("Click to browse for a CSV file")
         csv_button.clicked.connect(self.browse_csv)
         file_paths_layout.addWidget(csv_button)
 
-        png_label = QLabel("Select PNG File:")
-        file_paths_layout.addWidget(png_label)
-
-        self.png_line_edit = QLineEdit()
-        self.png_line_edit.setReadOnly(True)
-        file_paths_layout.addWidget(self.png_line_edit)
-
         png_button = QPushButton("Browse PNG")
+        png_button.setToolTip("Click to browse for a PNG file")
         png_button.clicked.connect(self.browse_png)
         file_paths_layout.addWidget(png_button)
-
-        # Graphics view layout
-        self.scene = QGraphicsScene()
-        self.graphics_view = QGraphicsView(self.scene)
-        layout.addWidget(self.graphics_view)
 
         # Tree view layout
         self.tree_widget = QTreeWidget()
         self.tree_widget.setColumnCount(3)
-        self.tree_widget.setHeaderLabels(["Designator", "X(mm)", "Y(mm)"])
-        self.tree_widget.itemSelectionChanged.connect(self.on_tree_item_selection_changed)
-        layout.addWidget(self.tree_widget)
+        self.tree_widget.setHeaderLabels(["Designator", "Comment", "Layer"])
+        self.tree_widget.header().setSectionResizeMode(QHeaderView.ResizeToContents)  # Adjust column widths
+        file_paths_layout.addWidget(self.tree_widget)
 
         # Next button layout
         next_button = QPushButton("Next")
+        next_button.setToolTip("Click to process files")
         next_button.clicked.connect(self.process_files)
-        layout.addWidget(next_button)
+        file_paths_layout.addWidget(next_button)
 
+        # Status bar
+        self.status_bar = QStatusBar()
+        layout.addWidget(self.status_bar)
+
+        # Image display layout
+        self.image_label = QLabel()
+        self.image_label.setFixedSize(600, 600)  # Increased size
+        layout.addWidget(self.image_label)
+
+        # Set layout
         self.setLayout(layout)
 
     def browse_csv(self):
@@ -67,20 +62,28 @@ class FileSelectorApp(QWidget):
         file_path, _ = file_dialog.getOpenFileName(self, "Select CSV File", "", "CSV Files (*.csv)")
         if file_path:
             self.csv_file_path = file_path
-            self.csv_line_edit.setText(file_path)
+            self.status_bar.showMessage("CSV file selected: " + file_path)
 
     def browse_png(self):
         file_dialog = QFileDialog()
         file_path, _ = file_dialog.getOpenFileName(self, "Select PNG File", "", "PNG Files (*.png)")
         if file_path:
             self.png_file_path = file_path
-            self.png_line_edit.setText(file_path)
+            self.status_bar.showMessage("PNG file selected: " + file_path)
+            self.show_png_image(file_path)
+
+    def show_png_image(self, file_path):
+        try:
+            pixmap = QPixmap(file_path)
+            self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), aspectRatioMode=True))
+        except Exception as e:
+            self.status_bar.showMessage(f"Error displaying PNG: {e}")
 
     def read_csv_with_warnings(self, csv_path):
         try:
             bom_data = pd.read_csv(csv_path)
-        except pd.errors.ParserError as e:
-            QMessageBox.warning(self, "Warning", f"Error reading CSV: {e}")
+        except Exception as e:
+            self.status_bar.showMessage(f"Error reading CSV: {e}")
             bom_data = pd.DataFrame()  # or None, depending on your use case
         return bom_data
 
@@ -92,44 +95,53 @@ class FileSelectorApp(QWidget):
         bom_data = self.read_csv_with_warnings(self.csv_file_path)
         if not bom_data.empty:
             self.display_bom_data(bom_data)
-            QMessageBox.information(self, "Success", "Files processed successfully!")
+            self.status_bar.showMessage("Files processed successfully!", 3000)  # Show for 3 seconds
         else:
-            QMessageBox.warning(self, "Warning", "No data to display.")
+            self.status_bar.showMessage("No data to display.")
 
     def display_bom_data(self, bom_data):
         self.tree_widget.clear()
         for _, row in bom_data.iterrows():
-            item = QTreeWidgetItem([row["Designator"], row["Center-X(mm)"], row["Center-Y(mm)"]])
+            item = QTreeWidgetItem([self.get_item_data(row['Designator'], 'Comment'), self.get_item_data(row['Designator'], 'Layer'), self.get_item_data(row['Designator'], 'Footprint')])
             self.tree_widget.addTopLevelItem(item)
 
-    def on_tree_item_selection_changed(self):
-        selected_items = self.tree_widget.selectedItems()
-        if selected_items:
-            selected_item_text = [item.text(0) for item in selected_items]
-            self.highlight_graphics_items(selected_item_text)
-        else:
-            self.scene.clear()
-
-    def highlight_graphics_items(self, item_text_list):
-        self.scene.clear()
-        for item_text in item_text_list:
-            # Draw a red circle at the specified position
-            x = float(self.get_item_data(item_text, "X(mm)"))
-            y = float(self.get_item_data(item_text, "Y(mm)"))
-            circle_item = self.scene.addEllipse(x, y, 10, 10, QPen(QColor("red")))
-            circle_item.setFlag(QGraphicsItem.ItemIsSelectable)
-
     def get_item_data(self, designator, column):
-        bom_data = pd.read_csv(self.csv_file_path)
-        data = bom_data.loc[bom_data["Designator"] == designator, column].values[0]
-        if isinstance(data, float):
-            if pd.isnull(data):  # Check if it's NaN
-                return ""  # or any default value you want
+        try:
+            bom_data = pd.read_csv(self.csv_file_path)
+            data = bom_data.loc[bom_data["Designator"] == designator, column].values
+            if len(data) > 0:
+                return str(data[0])
             else:
-                return str(data)
-        return str(data)
+                return ""
+        except Exception as e:
+            self.status_bar.showMessage(f"Error retrieving item data: {e}")
+            return ""
 
+    def context_menu_requested(self, pos):
+        context_menu = QMenu(self)
+        edit_action = QAction("Edit", self)
+        edit_action.triggered.connect(self.edit_selected_item)
+        context_menu.addAction(edit_action)
 
+        delete_action = QAction("Delete", self)
+        delete_action.triggered.connect(self.delete_selected_item)
+        context_menu.addAction(delete_action)
+
+        context_menu.exec_(self.tree_widget.viewport().mapToGlobal(pos))
+
+    def edit_selected_item(self):
+        selected_item = self.tree_widget.currentItem()
+        if selected_item:
+            column = self.tree_widget.currentColumn()
+            if column != 0:  # Allow editing only for certain columns
+                selected_item.setFlags(selected_item.flags() | Qt.ItemIsEditable)
+                self.tree_widget.editItem(selected_item, column)
+
+    def delete_selected_item(self):
+        selected_item = self.tree_widget.currentItem()
+        if selected_item:
+            parent = selected_item.parent() or self.tree_widget.invisibleRootItem()
+            parent.removeChild(selected_item)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
