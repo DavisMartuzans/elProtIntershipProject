@@ -34,8 +34,8 @@ class FileSelectorApp(QWidget):
 
         # Tree view layout
         self.tree_widget = QTreeWidget()
-        self.tree_widget.setColumnCount(3)
-        self.tree_widget.setHeaderLabels(["Designator", "Comment", "Layer"])
+        self.tree_widget.setColumnCount(12)  # Set column count to 12
+        self.tree_widget.setHeaderLabels(["Designator", "Comment", "Layer", "Footprint", "Center-X(mm)", "Center-Y(mm)", "Rotation", "Description", "Manufacture Part Number 1", "Supplier Part Number 1", "X", "Y"])  # Set header labels
         self.tree_widget.header().setSectionResizeMode(QHeaderView.ResizeToContents)  # Adjust column widths
         file_paths_layout.addWidget(self.tree_widget)
 
@@ -102,20 +102,21 @@ class FileSelectorApp(QWidget):
     def display_bom_data(self, bom_data):
         self.tree_widget.clear()
         for _, row in bom_data.iterrows():
-            item = QTreeWidgetItem([self.get_item_data(row['Designator'], 'Comment'), self.get_item_data(row['Designator'], 'Layer'), self.get_item_data(row['Designator'], 'Footprint')])
+            item = QTreeWidgetItem([
+                str(row["Designator"]),
+                str(row["Comment"]),
+                str(row["Layer"]),
+                str(row["Footprint"]),
+                str(row["Center-X(mm)"]),
+                str(row["Center-Y(mm)"]),
+                str(row["Rotation"]),
+                str(row["Description"]),
+                str(row["Manufacture Part Number 1"]),
+                str(row["Supplier Part Number 1"]),
+                "",  # Placeholder for X column
+                "",  # Placeholder for Y column
+            ])
             self.tree_widget.addTopLevelItem(item)
-
-    def get_item_data(self, designator, column):
-        try:
-            bom_data = pd.read_csv(self.csv_file_path)
-            data = bom_data.loc[bom_data["Designator"] == designator, column].values
-            if len(data) > 0:
-                return str(data[0])
-            else:
-                return ""
-        except Exception as e:
-            self.status_bar.showMessage(f"Error retrieving item data: {e}")
-            return ""
 
     def context_menu_requested(self, pos):
         context_menu = QMenu(self)
