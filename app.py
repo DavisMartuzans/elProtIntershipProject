@@ -1,7 +1,8 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QTreeWidget, QTreeWidgetItem, QMessageBox, QMenu, QAction, QHeaderView, QStatusBar
-from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor
+from PyQt5.QtCore import Qt, QPoint
+
 import pandas as pd
 
 class FileSelectorApp(QWidget):
@@ -37,6 +38,7 @@ class FileSelectorApp(QWidget):
         self.tree_widget.setColumnCount(12)  # Set column count to 12
         self.tree_widget.setHeaderLabels(["Designator", "Comment", "Layer", "Footprint", "Center-X(mm)", "Center-Y(mm)", "Rotation", "Description", "Manufacture Part Number 1", "Supplier Part Number 1", "X", "Y"])  # Set header labels
         self.tree_widget.header().setSectionResizeMode(QHeaderView.ResizeToContents)  # Adjust column widths
+        self.tree_widget.itemClicked.connect(self.handle_table_item_click)  # Connect item click event
         file_paths_layout.addWidget(self.tree_widget)
 
         # Next button layout
@@ -76,6 +78,7 @@ class FileSelectorApp(QWidget):
         try:
             pixmap = QPixmap(file_path)
             self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), aspectRatioMode=True))
+            self.image_pixmap = pixmap  # Store the pixmap for later use
         except Exception as e:
             self.status_bar.showMessage(f"Error displaying PNG: {e}")
 
@@ -143,6 +146,37 @@ class FileSelectorApp(QWidget):
         if selected_item:
             parent = selected_item.parent() or self.tree_widget.invisibleRootItem()
             parent.removeChild(selected_item)
+
+    def handle_table_item_click(self, item, column):
+        x_column_index = 4
+        y_column_index = 5
+
+        x_text = item.text(x_column_index)
+        y_text = item.text(y_column_index)
+
+        if x_text and y_text:  # Check if both x and y values are not empty
+            try:
+                x = float(x_text)
+                y = float(y_text)
+
+                self.draw_marker_on_image(x, y)
+            except ValueError as e:
+                self.status_bar.showMessage(f"Error converting coordinates to float: {e}")
+        else:
+            self.status_bar.showMessage("Empty coordinates.")
+
+    def draw_marker_on_image(self, x, y):
+        if hasattr(self, 'image_pixmap'):
+            pixmap = self.image_pixmap.copy()  # Create a copy of the original pixmap
+            painter = QPainter(pixmap)
+            painter.setPen(QColor(Qt.red))
+            scaled_x = int(x * pixmap.width() / 100)  # Scale x coordinate
+            scaled_y = int(y * pixmap.height() / 100)  # Scale y coordinate
+            painter.drawPoint(QPoint(scaled_x, scaled_y))
+            painter.end()
+            self.image_label.setPixmap(pixmap)
+        else:
+            self.status_bar.showMessage("No image loaded.")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
