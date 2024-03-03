@@ -1,30 +1,54 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QTreeWidget, QTreeWidgetItem, QMessageBox, QMenu, QAction, QHeaderView, QStatusBar
-from PyQt5.QtGui import QIcon, QPixmap, QImage, QPainter, QColor
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QTreeWidget, QTreeWidgetItem, QMessageBox, QMenu, QAction, QStatusBar, QMainWindow, QHeaderView
+from PyQt5.QtGui import QIcon, QPixmap, QImage, QPainter, QPen
 from PyQt5.QtCore import Qt, QPoint
 
 import pandas as pd
-import cv2  # Import OpenCV for image processing
+import cv2
+import numpy as np
 
-from image_processor import ImageProcessor
+class ImageProcessor:
+    def __init__(self, image_path):
+        self.image_path = image_path
+        self.designator_markers = {}  # Dictionary to store designator markers
 
+    def draw_marker_on_designator(self, designator):
+        # Placeholder method to draw a marker on the image based on the designator
+        # Replace this with your actual implementation
+        print(f"Drawing marker for designator: {designator}")
+
+        # For demonstration, let's just store the designator as a marker
+        self.designator_markers[designator] = True
+
+    def draw_designator_markers(self, pixmap):
+        # Draw circles for each designator marker on the pixmap
+        painter = QPainter(pixmap)
+        pen = QPen(Qt.red)
+        pen.setWidth(2)
+        painter.setPen(pen)
+
+        for designator in self.designator_markers.keys():
+            # Example: Draw circle at position (100, 100) with radius 20
+            painter.drawEllipse(QPoint(100, 100), 20, 20)
+
+        painter.end()
 
 class FileSelectorApp(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("elProt Ibom")
-        self.setGeometry(100, 100, 1000, 600)  # Increased width and height
+        self.setGeometry(100, 100, 1000, 600)  
 
         self.csv_file_path = None
         self.bmp_file_path = None
         self.image_processor = None
+        self.bitmap_window = None  # Reference to BitmapWindow
 
         self.init_ui()
 
     def init_ui(self):
         layout = QHBoxLayout()
 
-        # File paths layout
         file_paths_layout = QVBoxLayout()
         layout.addLayout(file_paths_layout)
 
@@ -38,30 +62,21 @@ class FileSelectorApp(QWidget):
         bmp_button.clicked.connect(self.browse_bmp)
         file_paths_layout.addWidget(bmp_button)
 
-        # Tree view layout
         self.tree_widget = QTreeWidget()
-        self.tree_widget.setColumnCount(12)  # Set column count to 12
-        self.tree_widget.setHeaderLabels(["Designator", "Comment", "Layer", "Footprint", "Center-X(mm)", "Center-Y(mm)", "Rotation", "Description", "Manufacture Part Number 1", "Supplier Part Number 1", "X", "Y"])  # Set header labels
-        self.tree_widget.header().setSectionResizeMode(QHeaderView.ResizeToContents)  # Adjust column widths
-        self.tree_widget.itemClicked.connect(self.handle_table_item_click)  # Connect item click event
+        self.tree_widget.setColumnCount(12)  
+        self.tree_widget.setHeaderLabels(["Designator", "Comment", "Layer", "Footprint", "Center-X(mm)", "Center-Y(mm)", "Rotation", "Description", "Manufacture Part Number 1", "Supplier Part Number 1", "X", "Y"])
+        self.tree_widget.header().setSectionResizeMode(QHeaderView.ResizeToContents)  
+        self.tree_widget.itemClicked.connect(self.handle_table_item_click)
         file_paths_layout.addWidget(self.tree_widget)
 
-        # Next button layout
         next_button = QPushButton("Next")
         next_button.setToolTip("Click to process files")
         next_button.clicked.connect(self.process_files)
         file_paths_layout.addWidget(next_button)
 
-        # Status bar
         self.status_bar = QStatusBar()
         layout.addWidget(self.status_bar)
 
-        # Image display layout
-        self.image_label = QLabel()
-        self.image_label.setFixedSize(600, 600)  # Increased size
-        layout.addWidget(self.image_label)
-
-        # Set layout
         self.setLayout(layout)
 
     def browse_csv(self):
@@ -80,35 +95,18 @@ class FileSelectorApp(QWidget):
             self.show_bmp_image(file_path)
 
     def show_bmp_image(self, file_path):
-        try:
-            # Load the bitmap image
-            bitmap_image = cv2.imread(file_path)
-
-            # Convert BGR image to RGB
-            bitmap_image = cv2.cvtColor(bitmap_image, cv2.COLOR_BGR2RGB)
-
-            # Convert the bitmap image to QImage format
-            height, width, channel = bitmap_image.shape
-            bytes_per_line = 3 * width
-            q_image = QImage(bitmap_image.data, width, height, bytes_per_line, QImage.Format_RGB888)
-
-            # Display the QImage in the QLabel
-            pixmap = QPixmap(q_image)
-            self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), aspectRatioMode=True))
-            self.image_label.setText("Selected Image (Bitmap)")
-
-            # Initialize the ImageProcessor with the bitmap image path
-            self.image_processor = ImageProcessor(file_path)
-
-        except Exception as e:
-            self.status_bar.showMessage(f"Error displaying Bitmap: {e}")
+        if not self.bitmap_window:
+            self.bitmap_window = BitmapWindow(file_path)
+            self.bitmap_window.show()
+        else:
+            self.bitmap_window.show_bmp_image(file_path)
 
     def read_csv_with_warnings(self, csv_path):
         try:
             bom_data = pd.read_csv(csv_path)
         except Exception as e:
             self.status_bar.showMessage(f"Error reading CSV: {e}")
-            bom_data = pd.DataFrame()  # or None, depending on your use case
+            bom_data = pd.DataFrame()  
         return bom_data
 
     def process_files(self):
@@ -121,8 +119,7 @@ class FileSelectorApp(QWidget):
         bom_data = self.read_csv_with_warnings(self.csv_file_path)
         if not bom_data.empty:
             self.display_bom_data(bom_data)
-            self.status_bar.showMessage("Files processed successfully!", 3000)  # Show for 3 seconds
-            # Placeholder for additional functionality
+            self.status_bar.showMessage("Files processed successfully!", 3000) 
         else:
             self.status_bar.showMessage("No data to display.")
 
@@ -140,19 +137,64 @@ class FileSelectorApp(QWidget):
                 str(row["Description"]),
                 str(row["Manufacture Part Number 1"]),
                 str(row["Supplier Part Number 1"]),
-                "",  # Placeholder for X column
-                "",  # Placeholder for Y column
+                "",  
+                "",  
             ])
             self.tree_widget.addTopLevelItem(item)
 
     def handle_table_item_click(self, item, column):
-        designator_index = 0  # Assuming the designator is in the first column
+        designator_index = 0  
         designator = item.text(designator_index)
         if self.image_processor:
             self.image_processor.draw_marker_on_designator(designator)
 
+class BitmapWindow(QMainWindow):
+    def __init__(self, bitmap_path):
+        super().__init__()
+        self.setWindowTitle("Bitmap Window")
+        self.setGeometry(200, 200, 600, 600)
+        
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+
+        layout = QVBoxLayout()
+        self.bitmap_label = QLabel()
+        layout.addWidget(self.bitmap_label)
+        self.central_widget.setLayout(layout)
+
+        self.show_bmp_image(bitmap_path)
+
+    def show_bmp_image(self, file_path):
+        try:
+            print("Loading bitmap image...")
+            # Load the image using QImage
+            q_image = QImage(file_path)
+            if q_image.isNull():
+                raise Exception("Failed to load image")
+            
+            # Convert QImage to QPixmap for display
+            pixmap = QPixmap.fromImage(q_image)
+            
+            # Resize the image if necessary
+            max_size = 600
+            if pixmap.width() > max_size or pixmap.height() > max_size:
+                pixmap = pixmap.scaled(max_size, max_size, Qt.KeepAspectRatio)
+
+            # Display the image
+            self.bitmap_label.setPixmap(pixmap)
+            self.bitmap_label.setScaledContents(True)  # Scale the pixmap to fit the label
+            
+            print("Bitmap image displayed successfully.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error displaying Bitmap: {e}")
+
+    def closeEvent(self, event):
+        self.parent().bitmap_window = None
+        event.accept()
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    file_selector_app = FileSelectorApp()  # Create an instance of FileSelectorApp
-    file_selector_app.show()  # Show the file selector app
+    file_selector_app = FileSelectorApp()  
+    file_selector_app.show()  
+
     sys.exit(app.exec_())
