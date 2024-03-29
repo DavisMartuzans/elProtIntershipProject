@@ -13,11 +13,11 @@ class ImageProcessor:
         self.image_resolution = image_resolution
         self.designator_markers = {}  # Dictionary to store designator markers
 
-    def draw_marker_on_designator(self, designator, x_mm, y_mm, rotation):
+    def draw_marker_on_designator(self, footprint, x_mm, y_mm, rotation):
         # Convert mm to pixels
         x_px = int(x_mm * self.image_resolution[0] / 25.4)  # Convert mm to inches
         y_px = int(y_mm * self.image_resolution[1] / 25.4)  # Convert mm to inches
-        self.designator_markers[designator] = (x_px, y_px, rotation)
+        self.designator_markers[footprint] = (x_px, y_px, rotation)
 
     def draw_designator_markers(self, pixmap):
         # Draw circles for each designator marker on the pixmap
@@ -26,7 +26,7 @@ class ImageProcessor:
         pen.setWidth(2)
         painter.setPen(pen)
 
-        for designator, (x, y, rotation) in self.designator_markers.items():
+        for footprint, (x, y, rotation) in self.designator_markers.items():
             painter.save()
             painter.translate(x, y)
             painter.rotate(rotation)
@@ -35,16 +35,15 @@ class ImageProcessor:
 
         painter.end()
 
-    def mark_designator_on_image(self, designator, pixmap_label):
+    def mark_designators_on_image(self, pixmap_label, designator=None):
         try:
-            # Load the image using OpenCV
+            # Load the selected image using OpenCV
             image = cv2.imread(self.image_path)
 
-            # Get designator coordinates from dictionary
-            x, y, rotation = self.designator_markers.get(designator, (0, 0, 0))
-
-            # Draw marker on the image
-            cv2.circle(image, (x, y), 10, (0, 0, 255), -1)  # Red circle marker
+            for footprint, (x, y, rotation) in self.designator_markers.items():
+                # Draw marker on the image if designator is None or matches the given designator
+                if designator is None or footprint == designator:
+                    cv2.circle(image, (x, y), 10, (0, 0, 255), -1)  # Red circle marker
 
             # Convert OpenCV image to QImage
             h, w, c = image.shape
@@ -54,16 +53,16 @@ class ImageProcessor:
             # Convert QImage to QPixmap
             pixmap = QPixmap.fromImage(q_image)
 
-            # Overlay the pixmap with the designator marker
+            # Overlay the pixmap with the designator markers
             self.draw_designator_markers(pixmap)
 
             # Display the updated image
             pixmap_label.setPixmap(pixmap)
             pixmap_label.setScaledContents(True)  # Scale the pixmap to fit the label
 
-            print("Designator marked on image.")
+            print("Designators marked on image.")
         except Exception as e:
-            print(f"Error marking designator on image: {e}")
+            print(f"Error marking designators on image: {e}")
 
 class FileSelectorApp(QWidget):
     def __init__(self):
@@ -75,6 +74,7 @@ class FileSelectorApp(QWidget):
         self.jpg_file_path = None
         self.image_processor = None
         self.bitmap_window = None  # Reference to BitmapWindow
+        self.selected_image_path = None  # Path to the currently selected image
 
         self.init_ui()
 
@@ -112,6 +112,9 @@ class FileSelectorApp(QWidget):
 
         self.setLayout(layout)
 
+        # Connect itemClicked signal to custom slot
+        self.tree_widget.itemClicked.connect(self.on_tree_item_clicked)
+
     def browse_csv(self):
         file_dialog = QFileDialog()
         file_path, _ = file_dialog.getOpenFileName(self, "Select CSV File", "", "CSV Files (*.csv)")
@@ -124,6 +127,7 @@ class FileSelectorApp(QWidget):
         file_path, _ = file_dialog.getOpenFileName(self, "Select JPG/PNG File", "", "Image Files (*.jpg *.jpeg *.png)")
         if file_path:
             self.jpg_file_path = file_path
+            self.selected_image_path = file_path  # Update selected image path
             self.status_bar.showMessage("JPG/PNG file selected: " + file_path)
             self.show_image(file_path)
 
@@ -157,8 +161,8 @@ class FileSelectorApp(QWidget):
         bom_data = self.read_csv_with_warnings(self.csv_file_path)
         if not bom_data.empty:
             self.display_bom_data(bom_data)
+            self.mark_designators_on_image()  # Call method to mark designators on the image
             self.status_bar.showMessage("Files processed successfully!", 3000)
-            self.mark_designators_on_image(bom_data)  # Call method to mark designators on the image
         else:
             self.status_bar.showMessage("No data to display.")
 
@@ -195,18 +199,19 @@ class FileSelectorApp(QWidget):
             print(f"Error getting image resolution: {e}")
             return None
 
-    def mark_designators_on_image(self, bom_data):
-        for _, row in bom_data.iterrows():
-            designator = str(row["Designator"])
-            x_mm = float(row["Center-X(mm)"])
-            y_mm = float(row["Center-Y(mm)"])
-            rotation = float(row["Rotation"])
-            self.image_processor.draw_marker_on_designator(designator, x_mm, y_mm, rotation)
-
-        # Get the pixmap label from the BitmapWindow and mark designators on the image
-        if self.bitmap_window:
+    def mark_designators_on_image(self):
+        if self.bitmap_window and self.selected_image_path:
             pixmap_label = self.bitmap_window.bitmap_label
-            self.image_processor.mark_designator_on_image(None, pixmap_label)  # Pass None for designator
+            image_processor = self.bitmap_window.image_processor
+            if image_processor:
+                image_processor.mark_designators_on_image(pixmap_label)
+            else:
+                QMessageBox.critical(self, "Error", "Image processor not initialized.")
+
+    def on_tree_item_clicked(self, item, column):
+        designator = item.text(1)  # Get designator from clicked item
+        if designator:
+            self.mark_designators_on_image()
 
 class BitmapWindow(QMainWindow):
     def __init__(self, image_path):
@@ -221,6 +226,11 @@ class BitmapWindow(QMainWindow):
         self.bitmap_label = QLabel()
         layout.addWidget(self.bitmap_label)
         self.central_widget.setLayout(layout)
+
+        self.image_processor = None
+
+        # Initialize QPainter for drawing on the pixmap label
+        self.painter = QPainter()
 
         self.show_image(image_path)
 
@@ -247,6 +257,29 @@ class BitmapWindow(QMainWindow):
             print("Image displayed successfully.")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error displaying image: {e}")
+
+    def mousePressEvent(self, event):
+        if self.image_processor and event.button() == Qt.LeftButton:
+            pos = event.pos()
+            # Check if the click position is within the bounds of the image
+            if self.bitmap_label.rect().contains(pos):
+                pixmap_size = self.bitmap_label.pixmap().size()
+                image_size = self.bitmap_label.rect().size()
+                # Calculate the scale factor
+                scale_factor = min(pixmap_size.width() / image_size.width(),
+                                   pixmap_size.height() / image_size.height())
+                # Convert the click position to the image coordinate system
+                image_pos = QPoint(pos.x() * scale_factor, pos.y() * scale_factor)
+                # Add designator marker at the clicked position
+                self.image_processor.draw_marker_on_designator("Clicked", image_pos.x(), image_pos.y(), 0)
+                # Update the image with the new marker
+                self.update_image()
+
+    def update_image(self):
+        if self.image_processor and self.image_processor.designator_markers:
+            pixmap = self.bitmap_label.pixmap().copy()  # Copy the current pixmap
+            self.image_processor.draw_designator_markers(pixmap)  # Draw designator markers on the copy
+            self.bitmap_label.setPixmap(pixmap)  # Update the label with the modified pixmap
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
