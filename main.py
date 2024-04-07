@@ -199,7 +199,7 @@ class FileSelectorApp(QWidget):
             checkbox = QCheckBox()
             self.tree_widget.setItemWidget(item, 0, checkbox)
             def mark_designators_on_image(checkbox, designator=row["Designator"]):
-                """Marks the selected designator on image when checkbox is checked."""
+                "Marks the selected designator on image when checkbox is checked."
                 if checkbox.isChecked():
                     self.designators_to_mark.append(designator)
                     self.mark_designators_on_image()
@@ -229,12 +229,6 @@ class FileSelectorApp(QWidget):
         except Exception as e:
             print(f"Error getting image resolution: {e}")
             return None
-
-    def show_dialog(self):
-        dialog = JpgImageDialog(self)
-        if dialog.exec_():
-            self.jpg_file_path = dialog.getJpgPath()
-            self.update_displayed_data()
 
     def mark_designators_on_image(self):
         if self.bitmap_window and self.selected_image_path:
