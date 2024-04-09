@@ -104,7 +104,7 @@ class FileSelectorApp(QWidget):
         self.tree_widget.setColumnCount(14)  # Increased column count to accommodate checkbox
         self.tree_widget.setHeaderLabels(
             ["Check", "Designator", "Comment", "Layer", "Footprint", "Center-X(mm)", "Center-Y(mm)", "Rotation",
-             "Description", "Manufacture Part Number 1", "Supplier Part Number 1", ""])  # Added empty label for checkbox column
+             "Description", "Manufacture Part Number 1", "Supplier Part Number 1", "X", "Y", ""])  # Added empty label for checkbox column
         self.tree_widget.header().setSectionResizeMode(QHeaderView.ResizeToContents)
         file_paths_layout.addWidget(self.tree_widget)
 
@@ -129,7 +129,7 @@ class FileSelectorApp(QWidget):
         if file_path:
             self.jpg_file_path = file_path
             self.selected_image_path = file_path  # Update selected image path
-            self.status_bar.showMessage("Image file selected: " + file_path)
+            self.status_bar.showMessage("JPG/PNG file selected: " + file_path)
             self.show_image(file_path)
 
     def show_image(self, file_path):
@@ -193,32 +193,14 @@ class FileSelectorApp(QWidget):
                 str(row["Rotation"]),
                 str(row["Description"]),
                 str(row["Manufacture Part Number 1"]),
-                str(row["Supplier Part Number 1"])
+                str(row["Supplier Part Number 1"]),
+                "",
+                "",
+                ""
             ])
             self.tree_widget.addTopLevelItem(item)
             checkbox = QCheckBox()
-            self.tree_widget.setItemWidget(item, 0, checkbox)
-            def mark_designators_on_image(checkbox, designator=row["Designator"]):
-                "Marks the selected designator on image when checkbox is checked."
-                if checkbox.isChecked():
-                    self.designators_to_mark.append(designator)
-                    self.mark_designators_on_image()
-                elif designator in self.designators_to_mark:
-                    self.designators_to_mark.remove(designator)
-
-    def read_csv_with_warnings(self, csv_file_path):
-        try:
-            return pd.read_csv(csv_file_path)
-        except FileNotFoundError as e:
-            msgBox = QMessageBox()
-            msgBox.setText("File not found error:\n" + str(e))
-            msgBox.exec_()
-            return None
-        except pd.errors.ParserError as e:
-            msgBox = QMessageBox()
-            msgBox.setText("Data parsing error:\n" + str(e))
-            msgBox.showWarning()
-            return None
+            self.tree_widget.setItemWidget(item, 0, checkbox)  # Set checkbox widget at column 0
 
     def get_image_resolution(self):
         try:
@@ -239,9 +221,12 @@ class FileSelectorApp(QWidget):
             else:
                 QMessageBox.critical(self, "Error", "Image processor not initialized.")
 
-
     
     def on_tree_item_clicked(self, item, column):
+        # Šeit nav vajadzības definēt metodi divreiz, ja ir vairākas funkcijas ar to pašu nosaukumu, tas var radīt neskaidrības
+        # Tāpēc nodrošiniet, ka šī ir vienīgā on_tree_item_clicked definīcija
+
+        # Iegūstam koordinātas no kokveida elementa
         try:
             x_mm = float(item.text(5))  # "Center-X(mm)" kolonna
             y_mm = float(item.text(6))  # "Center-Y(mm)" kolonna
@@ -274,7 +259,6 @@ class BitmapWindow(QMainWindow):
         self.central_widget.setLayout(layout)
 
         self.image_processor = image_processor
-
 
         # Show the image at the start
         self.show_image(image_path)
@@ -330,14 +314,10 @@ class BitmapWindow(QMainWindow):
 
             # Draw designator markers on the QPixmap
             self.image_processor.draw_designator_markers(pixmap)
-            # Set the new pixmap in the label
-            self.bitmap_label.setPixmap(pixmap)
 
             # Set the QPixmap onto the QLabel
             self.bitmap_label.setPixmap(pixmap)
             print("Designators should be marked on image now.")
-            # Run the application's main loop so that the updated image can be shown
-            app.processEvents()
 
 
 if __name__ == "__main__":
