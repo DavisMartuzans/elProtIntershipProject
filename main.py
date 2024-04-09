@@ -1,69 +1,10 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QTreeWidget, QTreeWidgetItem, QMessageBox, QMainWindow, QHeaderView, QStatusBar, QCheckBox
-from PyQt5.QtGui import QIcon, QPixmap, QImage, QPainter, QPen, QTransform
-from PyQt5.QtCore import Qt, QPoint, QRect
-
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QTreeWidget, QTreeWidgetItem, QMessageBox, QMainWindow, QHeaderView, QStatusBar, QCheckBox, QComboBox, QSlider
+from PyQt5.QtGui import QIcon, QImage, QPixmap, QPainter, QPen
+from PyQt5.QtCore import Qt
 import pandas as pd
+from image_processor import ImageProcessor
 import cv2
-import numpy as np
-
-class ImageProcessor:
-    def __init__(self, image_path, image_resolution):
-        self.image_path = image_path
-        self.image_resolution = image_resolution
-        self.designator_markers = {}  # Dictionary to store designator markers
-
-    def draw_marker_on_designator(self, footprint, x_mm, y_mm, rotation):
-        # Convert mm to pixels
-        x_px = int(x_mm * self.image_resolution[0] / 25.4)  # Convert mm to inches
-        y_px = int(y_mm * self.image_resolution[1] / 25.4)  # Convert mm to inches
-        self.designator_markers[footprint] = (x_px, y_px, rotation)
-
-    def draw_designator_markers(self, pixmap):
-        painter = QPainter()
-        if painter.begin(pixmap):
-            print("QPainter started successfully.")
-            pen = QPen(Qt.red, 4)  # Red pen with line width of 4
-            painter.setPen(pen)
-            painter.setBrush(Qt.yellow)  # Yellow brush for filled circle
-
-            for footprint, (x, y, rotation) in self.designator_markers.items():
-                print(f"Drawing marker for {footprint} at ({x}, {y}) with rotation {rotation}.")
-                painter.drawEllipse(QPoint(x, y), 10, 10)  # Draw the ellipse with center at (x,y) and radius 10
-
-            painter.end()
-            print("QPainter ended successfully.")
-        else:
-            print("Failed to start QPainter.")
-            
-    def mark_designators_on_image(self, pixmap_label, designator=None):
-        try:
-            # Load the selected image using OpenCV
-            image = cv2.imread(self.image_path)
-
-            for footprint, (x, y, rotation) in self.designator_markers.items():
-                # Draw marker on the image if designator is None or matches the given designator
-                if designator is None or footprint == designator:
-                    cv2.circle(image, (x, y), 10, (0, 0, 255), -1)  # Red circle marker
-
-            # Convert OpenCV image to QImage
-            h, w, c = image.shape
-            bytes_per_line = c * w
-            q_image = QImage(image.data, w, h, bytes_per_line, QImage.Format_BGR888)
-
-            # Convert QImage to QPixmap
-            pixmap = QPixmap.fromImage(q_image)
-
-            # Overlay the pixmap with the designator markers
-            self.draw_designator_markers(pixmap)
-
-            # Display the updated image
-            pixmap_label.setPixmap(pixmap)
-            pixmap_label.setScaledContents(True)  # Scale the pixmap to fit the label
-
-            print("Designators marked on image.")
-        except Exception as e:
-            print(f"Error marking designators on image: {e}")
 
 class FileSelectorApp(QWidget):
     def __init__(self):
@@ -100,11 +41,11 @@ class FileSelectorApp(QWidget):
         next_button.clicked.connect(self.process_files)
         file_paths_layout.addWidget(next_button)
 
-        self.tree_widget = QTreeWidget()
+        self.tree_widget = QTreeWidget(self)  # Pass the parent widget as an argument
         self.tree_widget.setColumnCount(14)  # Increased column count to accommodate checkbox
         self.tree_widget.setHeaderLabels(
             ["Check", "Designator", "Comment", "Layer", "Footprint", "Center-X(mm)", "Center-Y(mm)", "Rotation",
-             "Description", "Manufacture Part Number 1", "Supplier Part Number 1", "X", "Y", ""])  # Added empty label for checkbox column
+             "Description", "Manufacture Part Number 1", "Supplier Part Number 1", ""])  # Added empty label for checkbox column
         self.tree_widget.header().setSectionResizeMode(QHeaderView.ResizeToContents)
         file_paths_layout.addWidget(self.tree_widget)
 
@@ -114,7 +55,7 @@ class FileSelectorApp(QWidget):
         self.setLayout(layout)
 
         # Connect itemClicked signal to custom slot
-        self.tree_widget.itemClicked.connect(self.on_tree_item_clicked)
+        self.tree_widget.itemClicked.connect(self.onTreeItemClicked)
 
     def browse_csv(self):
         file_dialog = QFileDialog()
@@ -157,93 +98,75 @@ class FileSelectorApp(QWidget):
             QMessageBox.critical(self, "Error", "Failed to read image resolution.")
             return
 
-        # Inicializējiet ImageProcessor ar attēla ceļu un izšķirtspēju
+        # Initialize ImageProcessor with the image path and resolution
         self.image_processor = ImageProcessor(self.jpg_file_path, image_resolution)
 
-        # Izveidojiet BitmapWindow un padodiet tai ImageProcessor instanci
+        # Create BitmapWindow and pass the ImageProcessor instance to it
         if not self.bitmap_window:
             self.bitmap_window = BitmapWindow(self.selected_image_path, self.image_processor)
         else:
             self.bitmap_window.image_processor = self.image_processor
             self.bitmap_window.show_image(self.selected_image_path)
 
-        # Parādiet BitmapWindow
+        # Show BitmapWindow
         self.bitmap_window.show()
 
+        # Read CSV file and store designator coordinates in ImageProcessor
         bom_data = self.read_csv_with_warnings(self.csv_file_path)
         if not bom_data.empty:
             self.display_bom_data(bom_data)
-            self.mark_designators_on_image()  
             self.status_bar.showMessage("Files processed successfully!", 3000)
-        else:
-            self.status_bar.showMessage("No data to display.")
 
+            # Store designator coordinates in ImageProcessor
+            for _, row in bom_data.iterrows():
+                footprint = row["Designator"]
+                x_mm = row["Center-X(mm)"]
+                y_mm = row["Center-Y(mm)"]
+                rotation = row["Rotation"]
+                self.image_processor.draw_marker_on_designator(footprint, x_mm, y_mm, rotation)
 
     def display_bom_data(self, bom_data):
         self.tree_widget.clear()
+        self.tree_widget.setColumnCount(14)
+        self.tree_widget.setHeaderLabels(
+            ["Check", "Designator", "Comment", "Layer", "Footprint", "Center-X(mm)", "Center-Y(mm)", "Rotation",
+             "Description", "Manufacture Part Number 1", "Supplier Part Number 1", ""])
+
         for _, row in bom_data.iterrows():
-            item = QTreeWidgetItem([
-                "",
-                str(row["Designator"]),
-                str(row["Comment"]),
-                str(row["Layer"]),
-                str(row["Footprint"]),
-                str(row["Center-X(mm)"]),
-                str(row["Center-Y(mm)"]),
-                str(row["Rotation"]),
-                str(row["Description"]),
-                str(row["Manufacture Part Number 1"]),
-                str(row["Supplier Part Number 1"]),
-                "",
-                "",
-                ""
-            ])
-            self.tree_widget.addTopLevelItem(item)
-            checkbox = QCheckBox()
-            self.tree_widget.setItemWidget(item, 0, checkbox)  # Set checkbox widget at column 0
+            item = QTreeWidgetItem(self.tree_widget)
+            item.setCheckState(0, Qt.Unchecked)
+            item.setText(1, row["Designator"])
+            item.setText(2, row["Comment"])
+            item.setText(3, row["Layer"])
+            item.setText(4, row["Footprint"])
+            item.setText(5, str(row["Center-X(mm)"]))
+            item.setText(6, str(row["Center-Y(mm)"]))
+            item.setText(7, str(row["Rotation"]))
+            item.setText(8, row["Description"])
+            item.setText(9, row["Manufacture Part Number 1"])
+            item.setText(10, row["Supplier Part Number 1"])
+
+    def onTreeItemClicked(self, item, column):
+        if column == 0:
+            item.setCheckState(column, Qt.Checked if item.checkState(column) == Qt.Unchecked else Qt.Unchecked)
 
     def get_image_resolution(self):
         try:
             # Load the image using OpenCV to get its resolution
-            image = cv2.imread(self.jpg_file_path)
-            h, w, _ = image.shape
-            return w, h
+            image = cv2.imread(self.image_path)
+            if image is None:
+                print("Error: Failed to load the image.")
+                return None
+            else:
+                h, w, _ = image.shape
+                print("Image loaded successfully.")
+                print(f"Image shape: {w}x{h}")
+                return w, h
         except Exception as e:
             print(f"Error getting image resolution: {e}")
             return None
 
-    def mark_designators_on_image(self):
-        if self.bitmap_window and self.selected_image_path:
-            pixmap_label = self.bitmap_window.bitmap_label
-            image_processor = self.bitmap_window.image_processor
-            if image_processor:
-                image_processor.mark_designators_on_image(pixmap_label)
-            else:
-                QMessageBox.critical(self, "Error", "Image processor not initialized.")
 
-    
-    def on_tree_item_clicked(self, item, column):
-        # Šeit nav vajadzības definēt metodi divreiz, ja ir vairākas funkcijas ar to pašu nosaukumu, tas var radīt neskaidrības
-        # Tāpēc nodrošiniet, ka šī ir vienīgā on_tree_item_clicked definīcija
-
-        # Iegūstam koordinātas no kokveida elementa
-        try:
-            x_mm = float(item.text(5))  # "Center-X(mm)" kolonna
-            y_mm = float(item.text(6))  # "Center-Y(mm)" kolonna
-            rotation = float(item.text(7))  # "Rotation" kolonna
-        except ValueError:
-            QMessageBox.warning(self, "Invalid data", "Selected item does not contain valid coordinates.")
-            return
-
-        # Iegūstam atzīmējamā komponenta nosaukumu
-        designator = item.text(1)  # "Designator" kolonna
-
-        if self.bitmap_window and self.bitmap_window.isVisible():
-            if self.image_processor:
-                self.image_processor.draw_marker_on_designator(designator, x_mm, y_mm, rotation)
-                self.bitmap_window.update_image()
-            else:
-                QMessageBox.warning(self, "Error", "Image processor not initialized.")
 class BitmapWindow(QMainWindow):
     def __init__(self, image_path, image_processor):
         super().__init__()
@@ -254,14 +177,27 @@ class BitmapWindow(QMainWindow):
         self.setCentralWidget(self.central_widget)
 
         layout = QVBoxLayout()
+        self.central_widget.setLayout(layout)
+
         self.bitmap_label = QLabel()
         layout.addWidget(self.bitmap_label)
-        self.central_widget.setLayout(layout)
+
+        self.ratio_label = QLabel("Scale Ratio: 1.0")
+        layout.addWidget(self.ratio_label)
+
+        self.ratio_slider = QSlider(Qt.Horizontal)
+        self.ratio_slider.setMinimum(1)
+        self.ratio_slider.setMaximum(10)
+        self.ratio_slider.setTickPosition(QSlider.TicksBelow)
+        self.ratio_slider.setTickInterval(1)
+        self.ratio_slider.valueChanged.connect(self.update_ratio)
+        layout.addWidget(self.ratio_slider)
 
         self.image_processor = image_processor
 
         # Show the image at the start
         self.show_image(image_path)
+        self.scale_ratio = 1.0
 
     def show_image(self, file_path):
         # Load the image using QImage
@@ -284,41 +220,34 @@ class BitmapWindow(QMainWindow):
 
         print("Image displayed successfully.")
 
-    def mousePressEvent(self, event):
-        # Ensure that the click is within the image bounds
-        if self.image_processor and event.button() == Qt.LeftButton and self.bitmap_label.pixmap():
-            pos = self.bitmap_label.mapFromParent(event.pos())
-            if pos.x() >= 0 and pos.y() >= 0:
-                # Calculate the actual image position based on the scale factor
-                scale_factor = self.bitmap_label.pixmap().width() / self.bitmap_label.width()
-                image_pos = QPoint(int(pos.x() * scale_factor), int(pos.y() * scale_factor))
+    def mark_designators_on_image(self):
+        if self.image_processor:
+            pixmap_label = self.bitmap_label
+            self.image_processor.mark_designators_on_image(pixmap_label, self.scale_ratio, lock_to_real_size=True)
+        else:
+            QMessageBox.critical(self, "Error", "Image processor not initialized.")
 
-                # Add designator marker at the clicked position
-                self.image_processor.draw_marker_on_designator("Clicked", image_pos.x(), image_pos.y(), 0)
+    def update_ratio(self, value):
+        self.scale_ratio = value / 10
+        self.ratio_label.setText(f"Scale Ratio: {self.scale_ratio:.1f}")
+        self.mark_designators_on_image()
 
-                # Update the pixmap
-                self.update_image()
+    def paintEvent(self, event):
+        QMainWindow.paintEvent(self, event)
+        if self.image_processor:
+            pixmap_label = self.bitmap_label
+            painter = QPainter(pixmap_label.pixmap())
+            painter.setPen(QPen(Qt.gray, 1, Qt.DotLine))
 
-    # Update this method
-    def update_image(self):
-        # Check if the image processor is available and a pixmap currently exists
-        if self.image_processor and self.bitmap_label.pixmap():
-            # Load the image fresh from the file each time to prevent drawing over old markers
-            q_image = QImage(self.image_processor.image_path)
-            if q_image.isNull():
-                QMessageBox.critical(self, "Error", "Failed to load image")
-                return
-            
-            # Convert QImage to QPixmap
-            pixmap = QPixmap.fromImage(q_image)
+            # Draw vertical lines
+            for x in range(0, pixmap_label.width(), 15):  # Adjust the spacing of the grid as needed
+                painter.drawLine(x, 0, x, pixmap_label.height())
 
-            # Draw designator markers on the QPixmap
-            self.image_processor.draw_designator_markers(pixmap)
+            # Draw horizontal lines
+            for y in range(0, pixmap_label.height(), 15):  # Adjust the spacing of the grid as needed
+                painter.drawLine(0, y, pixmap_label.width(), y)
 
-            # Set the QPixmap onto the QLabel
-            self.bitmap_label.setPixmap(pixmap)
-            print("Designators should be marked on image now.")
-
+            painter.end()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
