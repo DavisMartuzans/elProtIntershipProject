@@ -20,27 +20,44 @@ class PCBTool(tk.Tk):
         self.mirror_horizontal = IntVar(value=0)
         self.mirror_vertical = IntVar(value=0)
 
-        control_panel = tk.Frame(self)
+        control_panel = tk.Frame(self, padx=10, pady=10)
         control_panel.pack(side=tk.LEFT, fill=tk.Y)
-        Label(control_panel, text="Scale X:").pack()
-        Entry(control_panel, textvariable=self.scale_x).pack()
-        Label(control_panel, text="Scale Y:").pack()
-        Entry(control_panel, textvariable=self.scale_y).pack()
-        Label(control_panel, text="Offset X:").pack()
-        Entry(control_panel, textvariable=self.offset_x).pack()
-        Label(control_panel, text="Offset Y:").pack()
-        Entry(control_panel, textvariable=self.offset_y).pack()
-        Label(control_panel, text="Rotation Angle:").pack()
-        Entry(control_panel, textvariable=self.rotation_angle).pack()
-        Checkbutton(control_panel, text="Mirror Horizontal", variable=self.mirror_horizontal).pack()
-        Checkbutton(control_panel, text="Mirror Vertical", variable=self.mirror_vertical).pack()
-        Button(control_panel, text="Apply", command=self.refresh_canvas).pack()
 
-        self.listbox = tk.Listbox(control_panel)
+
+        scale_frame = tk.Frame(control_panel, padx=5, pady=5)
+        scale_frame.pack(fill=tk.X)
+        Label(scale_frame, text="Scale X:", font=("Arial", 12)).pack()
+        Entry(scale_frame, textvariable=self.scale_x).pack()
+        Label(scale_frame, text="Scale Y:", font=("Arial", 12)).pack()
+        Entry(scale_frame, textvariable=self.scale_y).pack()
+
+        offset_frame = tk.Frame(control_panel, padx=5, pady=5)
+        offset_frame.pack(fill=tk.X)
+        Label(offset_frame, text="Offset X:", font=("Arial", 12)).pack()
+        Entry(offset_frame, textvariable=self.offset_x).pack()
+        Label(offset_frame, text="Offset Y:", font=("Arial", 12)).pack()
+        Entry(offset_frame, textvariable=self.offset_y).pack()
+
+        rotation_frame = tk.Frame(control_panel, padx=5, pady=5)
+        rotation_frame.pack(fill=tk.X)
+        Label(rotation_frame, text="Rotation Angle:", font=("Arial", 12)).pack()
+        Entry(rotation_frame, textvariable=self.rotation_angle).pack()
+
+        mirror_frame = tk.Frame(control_panel, padx=5, pady=5)
+        mirror_frame.pack(fill=tk.X)
+        Checkbutton(mirror_frame, text="Mirror Horizontal", variable=self.mirror_horizontal, font=("Arial", 12)).pack()
+        Checkbutton(mirror_frame, text="Mirror Vertical", variable=self.mirror_vertical, font=("Arial", 12)).pack()
+
+        Button(control_panel, text="Apply", command=self.refresh_canvas, font=("Arial", 12), bg="light blue").pack()
+
+        self.listbox = tk.Listbox(control_panel, width=50)
         self.listbox.pack(fill=tk.BOTH, expand=True)
         self.listbox.bind("<<ListboxSelect>>", self.on_select)
         for component in self.components:
-            self.listbox.insert(tk.END, component['name'])
+            listbox_entry = f"{component['name']} - X: {component['x']}, Y: {component['y']}"
+            if 'footprint' in component:
+                listbox_entry += f", Footprint: {component['footprint']}"
+            self.listbox.insert(tk.END, listbox_entry)
 
         self.canvas = tk.Canvas(self, bg='white')
         self.canvas.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
@@ -101,6 +118,13 @@ class PCBTool(tk.Tk):
 
         # Draw highlight
         self.canvas.create_oval(x-10, y-10, x+10, y+10, outline="red", width=2, tags="highlight")
+
+        def move_canvas(self):
+            new_window = Toplevel(self)
+            new_window.title("Canvas Window")
+            self.canvas.pack_forget()
+            self.canvas.pack(in_=new_window, side=tk.RIGHT, fill=tk.BOTH, expand=True)
+
 
 if __name__ == "__main__":
     app = PCBTool()
