@@ -54,6 +54,7 @@ class PCBTool(tk.Tk):
         Checkbutton(mirror_frame, text="Mirror Vertical", variable=self.mirror_vertical, font=("Arial", 12)).pack(anchor=tk.W)
 
         Button(control_panel, text="Apply", command=self.refresh_canvas, font=("Arial", 12), bg="light blue").pack(anchor=tk.W)
+        Button(control_panel, text="Export", command=self.export_image, font=("Arial", 12), bg="light green").pack(anchor=tk.W)
 
         self.listbox = Listbox(control_panel, width=50)
         self.listbox.pack(fill=tk.BOTH, expand=True)
@@ -130,6 +131,16 @@ class PCBTool(tk.Tk):
             self.canvas.pack_forget()
             self.canvas.pack(in_=new_window, side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
+    def export_image(self):
+        filename = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG Files", "*.png"), ("JPG Files", "*.jpg"), ("PDF Files", "*.pdf")])
+        if filename:
+            x0, y0, x1, y1 = self.canvas.bbox("all")
+            self.canvas.postscript(file="temp.ps", colormode="color")
+            img = Image.open("temp.ps")
+            img.crop((x0, y0, x1, y1)).save(filename)
+            # Delete temporary PostScript file
+            import os
+            os.remove("temp.ps")
 
 if __name__ == "__main__":
     app = PCBTool()
