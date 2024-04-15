@@ -1,13 +1,14 @@
 import tkinter as tk
-from tkinter import filedialog, Label, Entry, Button, Checkbutton, IntVar
+from tkinter import filedialog, Label, Entry, Button, Checkbutton, IntVar, Listbox
 from PIL import Image, ImageTk
 import csv
+from tkinter import Toplevel
 
 class PCBTool(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("PCB Component Highlighter")
-        self.geometry("1000x600")
+        self.geometry("1200x600")
 
         self.components = []
         self.load_files()
@@ -21,36 +22,40 @@ class PCBTool(tk.Tk):
         self.mirror_vertical = IntVar(value=0)
 
         control_panel = tk.Frame(self, padx=10, pady=10)
-        control_panel.pack(side=tk.LEFT, fill=tk.Y)
+        control_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
 
         scale_frame = tk.Frame(control_panel, padx=5, pady=5)
         scale_frame.pack(fill=tk.X)
-        Label(scale_frame, text="Scale X:", font=("Arial", 12)).pack()
-        Entry(scale_frame, textvariable=self.scale_x).pack()
-        Label(scale_frame, text="Scale Y:", font=("Arial", 12)).pack()
-        Entry(scale_frame, textvariable=self.scale_y).pack()
+        Label(scale_frame, text="Scaling", font=("Arial", 14, "bold")).pack(anchor=tk.W)
+        Label(scale_frame, text="Scale X:", font=("Arial", 12)).pack(anchor=tk.W)
+        Entry(scale_frame, textvariable=self.scale_x).pack(anchor=tk.W)
+        Label(scale_frame, text="Scale Y:", font=("Arial", 12)).pack(anchor=tk.W)
+        Entry(scale_frame, textvariable=self.scale_y).pack(anchor=tk.W)
 
         offset_frame = tk.Frame(control_panel, padx=5, pady=5)
         offset_frame.pack(fill=tk.X)
-        Label(offset_frame, text="Offset X:", font=("Arial", 12)).pack()
-        Entry(offset_frame, textvariable=self.offset_x).pack()
-        Label(offset_frame, text="Offset Y:", font=("Arial", 12)).pack()
-        Entry(offset_frame, textvariable=self.offset_y).pack()
+        Label(offset_frame, text="Offset", font=("Arial", 14, "bold")).pack(anchor=tk.W)
+        Label(offset_frame, text="Offset X:", font=("Arial", 12)).pack(anchor=tk.W)
+        Entry(offset_frame, textvariable=self.offset_x).pack(anchor=tk.W)
+        Label(offset_frame, text="Offset Y:", font=("Arial", 12)).pack(anchor=tk.W)
+        Entry(offset_frame, textvariable=self.offset_y).pack(anchor=tk.W)
 
         rotation_frame = tk.Frame(control_panel, padx=5, pady=5)
         rotation_frame.pack(fill=tk.X)
-        Label(rotation_frame, text="Rotation Angle:", font=("Arial", 12)).pack()
-        Entry(rotation_frame, textvariable=self.rotation_angle).pack()
+        Label(rotation_frame, text="Rotation", font=("Arial", 14, "bold")).pack(anchor=tk.W)
+        Label(rotation_frame, text="Rotation Angle:", font=("Arial", 12)).pack(anchor=tk.W)
+        Entry(rotation_frame, textvariable=self.rotation_angle).pack(anchor=tk.W)
 
         mirror_frame = tk.Frame(control_panel, padx=5, pady=5)
         mirror_frame.pack(fill=tk.X)
-        Checkbutton(mirror_frame, text="Mirror Horizontal", variable=self.mirror_horizontal, font=("Arial", 12)).pack()
-        Checkbutton(mirror_frame, text="Mirror Vertical", variable=self.mirror_vertical, font=("Arial", 12)).pack()
+        Label(mirror_frame, text="Mirroring", font=("Arial", 14, "bold")).pack(anchor=tk.W)
+        Checkbutton(mirror_frame, text="Mirror Horizontal", variable=self.mirror_horizontal, font=("Arial", 12)).pack(anchor=tk.W)
+        Checkbutton(mirror_frame, text="Mirror Vertical", variable=self.mirror_vertical, font=("Arial", 12)).pack(anchor=tk.W)
 
-        Button(control_panel, text="Apply", command=self.refresh_canvas, font=("Arial", 12), bg="light blue").pack()
+        Button(control_panel, text="Apply", command=self.refresh_canvas, font=("Arial", 12), bg="light blue").pack(anchor=tk.W)
 
-        self.listbox = tk.Listbox(control_panel, width=50)
+        self.listbox = Listbox(control_panel, width=50)
         self.listbox.pack(fill=tk.BOTH, expand=True)
         self.listbox.bind("<<ListboxSelect>>", self.on_select)
         for component in self.components:
