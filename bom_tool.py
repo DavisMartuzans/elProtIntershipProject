@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, Label, Entry, Button, Checkbutton, IntVar, Listbox
+from tkinter import filedialog, Label, Entry, Button, Checkbutton, IntVar, Listbox, ttk
 from PIL import Image, ImageTk
 import csv
 from tkinter import Toplevel
@@ -24,7 +24,6 @@ class PCBTool(tk.Tk):
         control_panel = tk.Frame(self, padx=10, pady=10)
         control_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-
         scale_frame = tk.Frame(control_panel, padx=5, pady=5)
         scale_frame.pack(fill=tk.X)
         Label(scale_frame, text="Scaling", font=("Arial", 14, "bold")).pack(anchor=tk.W)
@@ -39,7 +38,6 @@ class PCBTool(tk.Tk):
         Label(offset_frame, text="Offset X:", font=("Arial", 12)).pack(anchor=tk.W)
         Entry(offset_frame, textvariable=self.offset_x).pack(anchor=tk.W)
         Label(offset_frame, text="Offset Y:", font=("Arial", 12)).pack(anchor=tk.W)
-        Entry(offset_frame, textvariable=self.offset_y).pack(anchor=tk.W)
 
         rotation_frame = tk.Frame(control_panel, padx=5, pady=5)
         rotation_frame.pack(fill=tk.X)
@@ -54,16 +52,33 @@ class PCBTool(tk.Tk):
         Checkbutton(mirror_frame, text="Mirror Vertical", variable=self.mirror_vertical, font=("Arial", 12)).pack(anchor=tk.W)
 
         Button(control_panel, text="Apply", command=self.refresh_canvas, font=("Arial", 12), bg="light blue").pack(anchor=tk.W)
-        Button(control_panel, text="Export", command=self.export_image, font=("Arial", 12), bg="light green").pack(anchor=tk.W)
+        Button(control_panel, text="Export", command=self.export_spreadsheet, font=("Arial", 12), bg="light green").pack(anchor=tk.W)
 
-        self.listbox = Listbox(control_panel, width=50)
-        self.listbox.pack(fill=tk.BOTH, expand=True)
-        self.listbox.bind("<<ListboxSelect>>", self.on_select)
+        self.treeview = ttk.Treeview(control_panel)
+        self.treeview["columns"] = ("Name", "X", "Y", "Rotation", "Layer", "Footprint", "Manufacture Part Number", "Supplier Part Number")
+        self.treeview.heading("#0", text="", anchor=tk.W)
+        self.treeview.heading("Name", text="Name")
+        self.treeview.heading("X", text="X")
+        self.treeview.heading("Y", text="Y")
+        self.treeview.heading("Rotation", text="Rotation")
+        self.treeview.heading("Layer", text="Layer")
+        self.treeview.heading("Footprint", text="Footprint")
+        self.treeview.heading("Manufacture Part Number", text="Manufacture Part Number")
+        self.treeview.heading("Supplier Part Number", text="Supplier Part Number")
+        self.treeview.column("#0", width=0, stretch=tk.NO)
+        self.treeview.column("Name", width=100)
+        self.treeview.column("X", width=50)
+        self.treeview.column("Y", width=50)
+        self.treeview.column("Rotation", width=70)
+        self.treeview.column("Layer", width=100)
+        self.treeview.column("Footprint", width=150)
+        self.treeview.column("Manufacture Part Number", width=150)
+        self.treeview.column("Supplier Part Number", width=150)
+        self.treeview.pack(fill=tk.BOTH, expand=True)
+        self.treeview.bind("<ButtonRelease-1>", self.on_treeview_click)
+
         for component in self.components:
-            listbox_entry = f"{component['name']} - X: {component['x']}, Y: {component['y']}"
-            if 'footprint' in component:
-                listbox_entry += f", Footprint: {component['footprint']}"
-            self.listbox.insert(tk.END, listbox_entry)
+            self.treeview.insert("", "end", values=(component["name"], component["x"], component["y"], component["rotation"], component.get("layer", ""), component.get("footprint", ""), component.get("manufacture_part_number", ""), component.get("supplier_part_number", "")))
 
         self.canvas = tk.Canvas(self, bg='white')
         self.canvas.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
@@ -84,11 +99,26 @@ class PCBTool(tk.Tk):
                     'name': row['Designator'],
                     'x': float(row['Center-X(mm)']),
                     'y': float(row['Center-Y(mm)']),
-                    'rotation': float(row['Rotation'])
+                    'rotation': float(row['Rotation']),
+                    'layer': row['Layer'],  # Added 'layer' attribute
+                    'footprint': row['Footprint'],  # Added 'footprint' attribute
+                    'manufacture_part_number': row['Manufacture Part Number 1'],  # Added 'manufacture_part_number' attribute
+                    'supplier_part_number': row['Supplier Part Number 1']  # Added 'supplier_part_number' attribute
                 })
 
-    def on_select(self, event):
-        self.refresh_canvas()
+    def on_treeview_click(self, event):
+        item = self.treeview.selection()[0]
+        index = self.treeview.index(item)
+        component = self.components[index]
+        self.refresh_canvas(component)
+
+    def refresh_canvas(self, component):
+        self.canvas.delete("highlight")
+
+        x, y = self.apply_transformations(component['x'], component['y'])
+
+        # Draw highlight
+        self.canvas.create_oval(x - 10, y - 10, x + 10, y + 10, outline="red", width=2, tags="highlight")
 
     def apply_transformations(self, x, y):
         # Apply scaling first
@@ -112,35 +142,24 @@ class PCBTool(tk.Tk):
 
         return x_mirror, y_mirror
 
-    def refresh_canvas(self):
-        self.canvas.delete("highlight")
-
-        if not self.listbox.curselection():
-            return
-        index = int(self.listbox.curselection()[0])
-        component = self.components[index]
-
-        x, y = self.apply_transformations(component['x'], component['y'])
-
-        # Draw highlight
-        self.canvas.create_oval(x-10, y-10, x+10, y+10, outline="red", width=2, tags="highlight")
-
-        def move_canvas(self):
-            new_window = Toplevel(self)
-            new_window.title("Canvas Window")
-            self.canvas.pack_forget()
-            self.canvas.pack(in_=new_window, side=tk.RIGHT, fill=tk.BOTH, expand=True)
-
-    def export_image(self):
-        filename = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG Files", "*.png"), ("JPG Files", "*.jpg"), ("PDF Files", "*.pdf")])
+    def export_spreadsheet(self):
+        filename = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel Files", "*.xlsx")])
         if filename:
-            x0, y0, x1, y1 = self.canvas.bbox("all")
-            self.canvas.postscript(file="temp.ps", colormode="color")
-            img = Image.open("temp.ps")
-            img.crop((x0, y0, x1, y1)).save(filename)
-            # Delete temporary PostScript file
-            import os
-            os.remove("temp.ps")
+            with open(filename, 'w', newline='') as csvfile:
+                fieldnames = ['Designator', 'Center-X(mm)', 'Center-Y(mm)', 'Rotation', 'Layer', 'Footprint', 'Manufacture Part Number 1', 'Supplier Part Number 1']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+                for component in self.components:
+                    writer.writerow({
+                        'Designator': component['name'],
+                        'Center-X(mm)': component['x'],
+                        'Center-Y(mm)': component['y'],
+                        'Rotation': component['rotation'],
+                        'Layer': component.get('layer', ''),  # Use get() to avoid KeyError if attribute is missing
+                        'Footprint': component.get('footprint', ''),  # Use get() to avoid KeyError if attribute is missing
+                        'Manufacture Part Number 1': component.get('manufacture_part_number', ''),  # Use get() to avoid KeyError if attribute is missing
+                        'Supplier Part Number 1': component.get('supplier_part_number', '')  # Use get() to avoid KeyError if attribute is missing
+                    })
 
 if __name__ == "__main__":
     app = PCBTool()
