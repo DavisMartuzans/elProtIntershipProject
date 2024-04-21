@@ -96,7 +96,7 @@ class PCBTool(tk.Tk):
         Label(marker_frame, text="Marker Size:", font=("Arial", 12)).pack(anchor=tk.W)
         Entry(marker_frame, textvariable=self.marker_size).pack(anchor=tk.W)
         Label(marker_frame, text="Marker Shape:", font=("Arial", 12)).pack(anchor=tk.W)
-        Entry(marker_frame, textvariable=self.marker_shape).pack(anchor=tk.W)
+        ttk.Combobox(marker_frame, textvariable=self.marker_shape, values=["oval", "square", "square with dot"], state="readonly").pack(anchor=tk.W)
 
         # Apply and Export buttons
         Button(control_panel, text="Apply", command=self.refresh_canvas, font=("Arial", 12), bg="light blue").pack(anchor=tk.W)
@@ -156,8 +156,12 @@ class PCBTool(tk.Tk):
             marker_shape = self.marker_shape.get()
             if marker_shape == "oval":
                 self.canvas.create_oval(x - marker_size, y - marker_size, x + marker_size, y + marker_size, outline=marker_color, width=2, tags="highlight")
-            elif marker_shape == "rectangle":
+            elif marker_shape == "square":
                 self.canvas.create_rectangle(x - marker_size, y - marker_size, x + marker_size, y + marker_size, outline=marker_color, width=2, tags="highlight")
+            elif marker_shape == "square with dot":
+                self.canvas.create_rectangle(x - marker_size, y - marker_size, x + marker_size, y + marker_size, outline=marker_color, width=2, tags="highlight")
+                self.canvas.create_oval(x - 2, y - 2, x + 2, y + 2, fill=marker_color, outline=marker_color, tags="highlight")
+                self.canvas.create_line(x - marker_size, y - marker_size, x - marker_size, y + marker_size, fill=marker_color, tags="highlight")
             # Add other marker shapes if needed
 
     def apply_transformations(self, x, y):
