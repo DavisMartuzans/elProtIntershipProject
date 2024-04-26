@@ -26,8 +26,5 @@ The PCB Component Highlighter is a graphical application built using Python and 
 pip install pillow
 ## Usage Example
 python pcb_tool.py
-
-**License:**
-```markdown
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
