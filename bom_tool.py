@@ -1,8 +1,7 @@
 import tkinter as tk
-from tkinter import filedialog, Label, Entry, Button, Checkbutton, IntVar, Listbox, ttk
+from tkinter import filedialog, Label, Entry, Button, Checkbutton, IntVar, Listbox, ttk, Toplevel
 from PIL import Image, ImageTk
 import csv
-from tkinter import Toplevel
 
 class PCBTool(tk.Tk):
     def __init__(self):
@@ -102,6 +101,10 @@ class PCBTool(tk.Tk):
         Button(control_panel, text="Apply", command=self.refresh_canvas, font=("Arial", 12), bg="light blue").pack(anchor=tk.W)
         Button(control_panel, text="Export", command=self.export_spreadsheet, font=("Arial", 12), bg="light green").pack(anchor=tk.W)
 
+        # Toggle button to switch between using canvas in the same window and in a separate window
+        self.toggle_canvas_button = Button(control_panel, text="Toggle Canvas", command=self.toggle_canvas, font=("Arial", 12), bg="orange")
+        self.toggle_canvas_button.pack(anchor=tk.W)
+
         # Treeview widget to display component data
         self.treeview = ttk.Treeview(control_panel)
         self.treeview["columns"] = ("Name", "X", "Y", "Rotation", "Layer", "Footprint", "Manufacture Part Number", "Supplier Part Number")
@@ -137,6 +140,35 @@ class PCBTool(tk.Tk):
         self.tk_image = ImageTk.PhotoImage(self.original_image)
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image, tags="image")
         self.pcb_width, self.pcb_height = self.original_image.size
+
+        # Flag to track the canvas location
+        self.canvas_in_window = False
+        self.canvas_window = None
+
+    def toggle_canvas(self):
+        if self.canvas_in_window:
+            self.canvas_window.destroy()
+            self.toggle_canvas_button.config(text="Toggle Canvas (In Separate Window)")
+            self.canvas_in_window = False
+        else:
+            self.canvas_window = Toplevel(self)
+            self.canvas_window.title("PCB Canvas")
+            self.canvas_window.attributes("-topmost", True)  # Set always on top
+            self.canvas_frame = tk.Frame(self.canvas_window, padx=10, pady=10)
+            self.canvas_frame.pack(fill=tk.BOTH, expand=True)
+            self.canvas = tk.Canvas(self.canvas_frame, bg='white')
+            self.canvas.pack(fill=tk.BOTH, expand=True)
+            self.original_image = Image.open(self.pcb_image_path)
+            self.tk_image = ImageTk.PhotoImage(self.original_image)
+            self.canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image, tags="image")
+            self.pcb_width, self.pcb_height = self.original_image.size
+            self.canvas.bind("<Button-1>", self.scale_to_image)  # Bind click event to scale image
+            self.toggle_canvas_button.config(text="Toggle Canvas (In Window)")
+            self.canvas_in_window = True
+
+    def scale_to_image(self, event):
+        # Function to scale the window to fit the image size when clicked
+        self.canvas_window.geometry("{}x{}".format(self.pcb_width, self.pcb_height))
 
     def on_treeview_click(self, event):
         # Function to handle click events on Treeview
