@@ -147,22 +147,34 @@ class PCBTool(tk.Tk):
 
     def toggle_canvas(self):
         if self.canvas_in_window:
+            # Store the geometry of the current window
+            geometry = self.canvas_window.geometry()
             self.canvas_window.destroy()
-            self.toggle_canvas_button.config(text="Toggle Canvas (In Separate Window)")
+            
+            # Re-create the canvas in the original parent window
+            self.canvas = tk.Canvas(self.original_parent, bg='white')  
+            self.canvas.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+            self.tk_image = ImageTk.PhotoImage(self.original_image)
+            self.canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image, tags="image")
+            self.canvas_window = None  # Reset the canvas window reference
             self.canvas_in_window = False
+            self.toggle_canvas_button.config(text="Toggle Canvas (In Separate Window)")
         else:
+            # Store the original parent window
+            self.original_parent = self.winfo_toplevel()
+            
+            # Create a new window for the canvas
             self.canvas_window = Toplevel(self)
             self.canvas_window.title("PCB Canvas")
-            self.canvas_window.attributes("-topmost", True)  # Always on top, lai tas nepazustu aiz galvenā loga
+            self.canvas_window.attributes("-topmost", True)
             self.canvas_frame = tk.Frame(self.canvas_window, padx=10, pady=10)
             self.canvas_frame.pack(fill=tk.BOTH, expand=True)
             self.canvas = tk.Canvas(self.canvas_frame, bg='white')
             self.canvas.pack(fill=tk.BOTH, expand=True)
-            self.original_image = Image.open(self.pcb_image_path)
             self.tk_image = ImageTk.PhotoImage(self.original_image)
             self.canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image, tags="image")
             self.pcb_width, self.pcb_height = self.original_image.size
-            self.canvas.bind("<Button-1>", self.scale_to_image)  # Bind click, lai mērogotu attēlu
+            self.canvas.bind("<Button-1>", self.scale_to_image)
             self.toggle_canvas_button.config(text="Toggle Canvas (In Window)")
             self.canvas_in_window = True
 
