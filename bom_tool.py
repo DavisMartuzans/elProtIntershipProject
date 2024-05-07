@@ -48,65 +48,64 @@ class PCBTool(tk.Tk):
         self.offset_x = tk.DoubleVar(value=0.0)
         self.offset_y = tk.DoubleVar(value=0.0)
         self.rotation_angle = tk.DoubleVar(value=0.0)
-        self.mirror_horizontal = IntVar(value=0)
-        self.mirror_vertical = IntVar(value=0)
+        self.mirror_horizontal = tk.IntVar(value=0)
+        self.mirror_vertical = tk.IntVar(value=0)
 
         # Izveido vadības paneļa rāmi
         control_panel = tk.Frame(self, padx=10, pady=10)
         control_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Mērogošanas kontroles
-        scale_frame = tk.Frame(control_panel, padx=5, pady=5)
-        scale_frame.pack(fill=tk.X)
-        Label(scale_frame, text="Scaling", font=("Arial", 14, "bold")).pack(anchor=tk.W)
-        Label(scale_frame, text="Scale X:", font=("Arial", 12)).pack(anchor=tk.W)
-        Entry(scale_frame, textvariable=self.scale_x).pack(anchor=tk.W)
-        Label(scale_frame, text="Scale Y:", font=("Arial", 12)).pack(anchor=tk.W)
-        Entry(scale_frame, textvariable=self.scale_y).pack(anchor=tk.W)
+        scale_frame = tk.LabelFrame(control_panel, text="Scaling")
+        scale_frame.grid(row=0, column=0, padx=10, pady=10, sticky=tk.W)
+        tk.Label(scale_frame, text="Scale X:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        tk.Entry(scale_frame, textvariable=self.scale_x).grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
+        tk.Label(scale_frame, text="Scale Y:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+        tk.Entry(scale_frame, textvariable=self.scale_y).grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
 
         # Nobīdes kontroles
-        offset_frame = tk.Frame(control_panel, padx=5, pady=5)
-        offset_frame.pack(fill=tk.X)
-        Label(offset_frame, text="Offset", font=("Arial", 14, "bold")).pack(anchor=tk.W)
-        Label(offset_frame, text="Offset X:", font=("Arial", 12)).pack(anchor=tk.W)
-        Entry(offset_frame, textvariable=self.offset_x).pack(anchor=tk.W)
-        Label(offset_frame, text="Offset Y:", font=("Arial", 12)).pack(anchor=tk.W)
+        offset_frame = tk.LabelFrame(control_panel, text="Offset")
+        offset_frame.grid(row=1, column=0, padx=10, pady=10, sticky=tk.W)
+        tk.Label(offset_frame, text="Offset X:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        tk.Entry(offset_frame, textvariable=self.offset_x).grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
+        tk.Label(offset_frame, text="Offset Y:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+        tk.Entry(offset_frame, textvariable=self.offset_y).grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
 
         # Rotācijas kontroles
-        rotation_frame = tk.Frame(control_panel, padx=5, pady=5)
-        rotation_frame.pack(fill=tk.X)
-        Label(rotation_frame, text="Rotation", font=("Arial", 14, "bold")).pack(anchor=tk.W)
-        Label(rotation_frame, text="Rotation Angle:", font=("Arial", 12)).pack(anchor=tk.W)
-        Entry(rotation_frame, textvariable=self.rotation_angle).pack(anchor=tk.W)
+        rotation_frame = tk.LabelFrame(control_panel, text="Rotation")
+        rotation_frame.grid(row=2, column=0, padx=10, pady=10, sticky=tk.W)
+        tk.Label(rotation_frame, text="Rotation Angle:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        tk.Entry(rotation_frame, textvariable=self.rotation_angle).grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
 
         # Spoguļošanas kontroles
-        mirror_frame = tk.Frame(control_panel, padx=5, pady=5)
-        mirror_frame.pack(fill=tk.X)
-        Label(mirror_frame, text="Mirroring", font=("Arial", 14, "bold")).pack(anchor=tk.W)
-        Checkbutton(mirror_frame, text="Mirror Horizontal", variable=self.mirror_horizontal, font=("Arial", 12)).pack(anchor=tk.W)
-        Checkbutton(mirror_frame, text="Mirror Vertical", variable=self.mirror_vertical, font=("Arial", 12)).pack(anchor=tk.W)
+        mirror_frame = tk.LabelFrame(control_panel, text="Mirroring")
+        mirror_frame.grid(row=3, column=0, padx=10, pady=10, sticky=tk.W)
+        tk.Checkbutton(mirror_frame, text="Mirror Horizontal", variable=self.mirror_horizontal).grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        tk.Checkbutton(mirror_frame, text="Mirror Vertical", variable=self.mirror_vertical).grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
 
         # Marķiera iestatījumu kontroles
-        marker_frame = tk.Frame(control_panel, padx=5, pady=5)
-        marker_frame.pack(fill=tk.X)
-        Label(marker_frame, text="Marker Settings", font=("Arial", 14, "bold")).pack(anchor=tk.W)
-        Label(marker_frame, text="Marker Color:", font=("Arial", 12)).pack(anchor=tk.W)
-        Entry(marker_frame, textvariable=self.marker_color).pack(anchor=tk.W)
-        Label(marker_frame, text="Marker Size:", font=("Arial", 12)).pack(anchor=tk.W)
-        Entry(marker_frame, textvariable=self.marker_size).pack(anchor=tk.W)
-        Label(marker_frame, text="Marker Shape:", font=("Arial", 12)).pack(anchor=tk.W)
-        ttk.Combobox(marker_frame, textvariable=self.marker_shape, values=["oval", "square", "square with dot"], state="readonly").pack(anchor=tk.W)
+        marker_frame = tk.LabelFrame(control_panel, text="Marker Settings")
+        marker_frame.grid(row=4, column=0, padx=10, pady=10, sticky=tk.W)
+        tk.Label(marker_frame, text="Marker Color:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        tk.Entry(marker_frame, textvariable=self.marker_color).grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
+        tk.Label(marker_frame, text="Marker Size:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+        tk.Entry(marker_frame, textvariable=self.marker_size).grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
+        tk.Label(marker_frame, text="Marker Shape:").grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
+        ttk.Combobox(marker_frame, textvariable=self.marker_shape, values=["oval", "square", "square with dot"], state="readonly").grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
 
         # Apply and Export Pogas
-        Button(control_panel, text="Apply", command=self.refresh_canvas, font=("Arial", 12), bg="light blue").pack(anchor=tk.W)
-        Button(control_panel, text="Export", command=self.export_spreadsheet, font=("Arial", 12), bg="light green").pack(anchor=tk.W)
+        apply_button = tk.Button(control_panel, text="Apply", command=self.refresh_canvas, font=("Arial", 12), bg="light blue")
+        apply_button.grid(row=5, column=0, padx=5, pady=5, sticky=tk.W)
+        export_button = tk.Button(control_panel, text="Export", command=self.export_spreadsheet, font=("Arial", 12), bg="light green")
+        export_button.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
 
         # Pārslēgšanās poga, lai pārslēgtos starp canvas izmantošanu tajā pašā logā un citā logā
-        self.toggle_canvas_button = Button(control_panel, text="Toggle Canvas", command=self.toggle_canvas, font=("Arial", 12), bg="orange")
-        self.toggle_canvas_button.pack(anchor=tk.W)
-        
+        self.toggle_canvas_button = tk.Button(control_panel, text="Toggle Canvas", command=self.toggle_canvas, font=("Arial", 12), bg="orange")
+        self.toggle_canvas_button.grid(row=6, column=0, columnspan=2, padx=5, pady=5, sticky=tk.W)
+
         # Treeview logrīks lai parādītu komponentu datus
         self.treeview = ttk.Treeview(control_panel)
+        self.treeview.grid(row=0, column=1, rowspan=7, padx=10, pady=10, sticky=tk.NSEW)
         self.treeview["columns"] = ("Name", "X", "Y", "Rotation", "Layer", "Footprint", "Manufacture Part Number", "Supplier Part Number")
         self.treeview.heading("#0", text="", anchor=tk.W)
         self.treeview.heading("Name", text="Name")
@@ -126,10 +125,8 @@ class PCBTool(tk.Tk):
         self.treeview.column("Footprint", width=150)
         self.treeview.column("Manufacture Part Number", width=150)
         self.treeview.column("Supplier Part Number", width=150)
-        self.treeview.pack(fill=tk.BOTH, expand=True)
         self.treeview.bind("<ButtonRelease-1>", self.on_treeview_click)
 
-        
         # Ievieto komponentu datus Treeview
         for component in self.components:
             self.treeview.insert("", "end", values=(component["name"], component["x"], component["y"], component["rotation"], component.get("layer", ""), component.get("footprint", ""), component.get("manufacture_part_number", ""), component.get("supplier_part_number", "")))
