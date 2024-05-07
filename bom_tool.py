@@ -104,7 +104,7 @@ class PCBTool(tk.Tk):
         # Pārslēgšanās poga, lai pārslēgtos starp canvas izmantošanu tajā pašā logā un citā logā
         self.toggle_canvas_button = Button(control_panel, text="Toggle Canvas", command=self.toggle_canvas, font=("Arial", 12), bg="orange")
         self.toggle_canvas_button.pack(anchor=tk.W)
-
+        
         # Treeview logrīks lai parādītu komponentu datus
         self.treeview = ttk.Treeview(control_panel)
         self.treeview["columns"] = ("Name", "X", "Y", "Rotation", "Layer", "Footprint", "Manufacture Part Number", "Supplier Part Number")
@@ -129,6 +129,7 @@ class PCBTool(tk.Tk):
         self.treeview.pack(fill=tk.BOTH, expand=True)
         self.treeview.bind("<ButtonRelease-1>", self.on_treeview_click)
 
+        
         # Ievieto komponentu datus Treeview
         for component in self.components:
             self.treeview.insert("", "end", values=(component["name"], component["x"], component["y"], component["rotation"], component.get("layer", ""), component.get("footprint", ""), component.get("manufacture_part_number", ""), component.get("supplier_part_number", "")))
@@ -147,23 +148,14 @@ class PCBTool(tk.Tk):
 
     def toggle_canvas(self):
         if self.canvas_in_window:
-            # Store the geometry of the current window
-            geometry = self.canvas_window.geometry()
             self.canvas_window.destroy()
-            
-            # Re-create the canvas in the original parent window
-            self.canvas = tk.Canvas(self.original_parent, bg='white')  
+            self.canvas = tk.Canvas(self, bg='white')  # Re-initialize the canvas
             self.canvas.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-            self.tk_image = ImageTk.PhotoImage(self.original_image)
+            self.tk_image = ImageTk.PhotoImage(self.original_image)  # Re-initialize the image
             self.canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image, tags="image")
-            self.canvas_window = None  # Reset the canvas window reference
             self.canvas_in_window = False
             self.toggle_canvas_button.config(text="Toggle Canvas (In Separate Window)")
         else:
-            # Store the original parent window
-            self.original_parent = self.winfo_toplevel()
-            
-            # Create a new window for the canvas
             self.canvas_window = Toplevel(self)
             self.canvas_window.title("PCB Canvas")
             self.canvas_window.attributes("-topmost", True)
@@ -177,6 +169,9 @@ class PCBTool(tk.Tk):
             self.canvas.bind("<Button-1>", self.scale_to_image)
             self.toggle_canvas_button.config(text="Toggle Canvas (In Window)")
             self.canvas_in_window = True
+
+            # Add a binding to the separate window's WM_DELETE_WINDOW protocol
+            self.canvas_window.protocol("WM_DELETE_WINDOW", self.toggle_canvas)
 
     def scale_to_image(self, event):
         # Funkcija loga mērogošanai, lai tas atbilstu attēla izmēram, noklikšķinot
