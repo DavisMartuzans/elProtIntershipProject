@@ -9,24 +9,24 @@ class PCBTool(tk.Tk):
         self.title("PCB Component Highlighter")
         self.geometry("1200x600")
 
-        # Saraksts,kas saglabātu komponentu datus, kas tiek ielādēti no failiem
+        # List to store component data loaded from files
         self.components = []
         
-        # Marker iestatījumu mainīgie
+        # Marker settings variables
         self.marker_color = tk.StringVar(value="red")  # Default marker color
         self.marker_size = tk.DoubleVar(value=10.0)    # Default marker size
-        self.marker_shape = tk.StringVar(value="oval")# Default marker shape
+        self.marker_shape = tk.StringVar(value="oval") # Default marker shape
         
-        # Atver failu datus un iestata sākotnējo GUI(Vadības panelis)
+        # Load file data and set up the initial GUI (Control panel)
         self.load_files()
         self.setup_gui()
 
     def load_files(self):
-        # Pieprasa izvēlēties failu ar komponentu datiem un attēlu
+        # Prompt to select files with component data and image
         pnp_file_path = filedialog.askopenfilename(title="Select Pick-and-Place File", filetypes=[("CSV Files", "*.csv")])
         self.pcb_image_path = filedialog.askopenfilename(title="Select PCB Image", filetypes=[("Image Files", "*.png"), ("Image Files", "*.jpg")])
 
-        # Lasa datus no Pick-and-Place faila (CSV) un saglabājiet tos self.components sarakstā
+        # Read data from Pick-and-Place file (CSV) and store it in self.components list
         with open(pnp_file_path, newline='') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
@@ -42,7 +42,7 @@ class PCBTool(tk.Tk):
                 })
 
     def setup_gui(self):
-        # Inicializē mainīgos mērogošanas, nobīdes, pagriešanas un spoguļošanas
+        # Initialize variables for scaling, offset, rotation, and mirroring
         self.scale_x = tk.DoubleVar(value=1.0)
         self.scale_y = tk.DoubleVar(value=1.0)
         self.offset_x = tk.DoubleVar(value=0.0)
@@ -51,11 +51,11 @@ class PCBTool(tk.Tk):
         self.mirror_horizontal = tk.IntVar(value=0)
         self.mirror_vertical = tk.IntVar(value=0)
 
-        # Izveido vadības paneļa rāmi
+        # Create the control panel frame
         control_panel = tk.Frame(self, padx=10, pady=10)
         control_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # Mērogošanas kontroles
+        # Scaling controls
         scale_frame = tk.LabelFrame(control_panel, text="Scaling")
         scale_frame.grid(row=0, column=0, padx=10, pady=10, sticky=tk.W)
         tk.Label(scale_frame, text="Scale X:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
@@ -63,7 +63,7 @@ class PCBTool(tk.Tk):
         tk.Label(scale_frame, text="Scale Y:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
         tk.Entry(scale_frame, textvariable=self.scale_y).grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
 
-        # Nobīdes kontroles
+        # Offset controls
         offset_frame = tk.LabelFrame(control_panel, text="Offset")
         offset_frame.grid(row=1, column=0, padx=10, pady=10, sticky=tk.W)
         tk.Label(offset_frame, text="Offset X:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
@@ -71,19 +71,19 @@ class PCBTool(tk.Tk):
         tk.Label(offset_frame, text="Offset Y:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
         tk.Entry(offset_frame, textvariable=self.offset_y).grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
 
-        # Rotācijas kontroles
+        # Rotation controls
         rotation_frame = tk.LabelFrame(control_panel, text="Rotation")
         rotation_frame.grid(row=2, column=0, padx=10, pady=10, sticky=tk.W)
         tk.Label(rotation_frame, text="Rotation Angle:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
         tk.Entry(rotation_frame, textvariable=self.rotation_angle).grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
 
-        # Spoguļošanas kontroles
+        # Mirroring controls
         mirror_frame = tk.LabelFrame(control_panel, text="Mirroring")
         mirror_frame.grid(row=3, column=0, padx=10, pady=10, sticky=tk.W)
         tk.Checkbutton(mirror_frame, text="Mirror Horizontal", variable=self.mirror_horizontal).grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
         tk.Checkbutton(mirror_frame, text="Mirror Vertical", variable=self.mirror_vertical).grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
 
-        # Marķiera iestatījumu kontroles
+        # Marker settings controls
         marker_frame = tk.LabelFrame(control_panel, text="Marker Settings")
         marker_frame.grid(row=4, column=0, padx=10, pady=10, sticky=tk.W)
         tk.Label(marker_frame, text="Marker Color:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
@@ -93,17 +93,17 @@ class PCBTool(tk.Tk):
         tk.Label(marker_frame, text="Marker Shape:").grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
         ttk.Combobox(marker_frame, textvariable=self.marker_shape, values=["oval", "square", "square with dot"], state="readonly").grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
 
-        # Apply and Export Pogas
+        # Apply and Export Buttons
         apply_button = tk.Button(control_panel, text="Apply", command=self.refresh_canvas, font=("Arial", 12), bg="light blue")
         apply_button.grid(row=5, column=0, padx=5, pady=5, sticky=tk.W)
         export_button = tk.Button(control_panel, text="Export", command=self.export_spreadsheet, font=("Arial", 12), bg="light green")
         export_button.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
 
-        # Pārslēgšanās poga, lai pārslēgtos starp canvas izmantošanu tajā pašā logā un citā logā
+        # Toggle button to switch between using canvas in the same window and a separate window
         self.toggle_canvas_button = tk.Button(control_panel, text="Toggle Canvas", command=self.toggle_canvas, font=("Arial", 12), bg="orange")
         self.toggle_canvas_button.grid(row=6, column=0, columnspan=2, padx=5, pady=5, sticky=tk.W)
 
-        # Treeview logrīks lai parādītu komponentu datus
+        # Treeview widget to display component data
         self.treeview = ttk.Treeview(control_panel)
         self.treeview.grid(row=0, column=1, rowspan=7, padx=10, pady=10, sticky=tk.NSEW)
         self.treeview["columns"] = ("Name", "X", "Y", "Rotation", "Layer", "Footprint", "Manufacture Part Number", "Supplier Part Number")
@@ -127,11 +127,11 @@ class PCBTool(tk.Tk):
         self.treeview.column("Supplier Part Number", width=150)
         self.treeview.bind("<ButtonRelease-1>", self.on_treeview_click)
 
-        # Ievieto komponentu datus Treeview
+        # Insert component data into Treeview
         for component in self.components:
             self.treeview.insert("", "end", values=(component["name"], component["x"], component["y"], component["rotation"], component.get("layer", ""), component.get("footprint", ""), component.get("manufacture_part_number", ""), component.get("supplier_part_number", "")))
 
-        # Canvas lai parādītu PCB attēlu un komponentu highlights
+        # Canvas to display PCB image and component highlights
         self.canvas = tk.Canvas(self, bg='white')
         self.canvas.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         self.original_image = Image.open(self.pcb_image_path)
@@ -139,7 +139,7 @@ class PCBTool(tk.Tk):
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image, tags="image")
         self.pcb_width, self.pcb_height = self.original_image.size
 
-        # Atzīmē, lai izsekotu kanvas atrašanās vietu
+        # Flag to track canvas location
         self.canvas_in_window = False
         self.canvas_window = None
 
@@ -171,22 +171,22 @@ class PCBTool(tk.Tk):
             self.canvas_window.protocol("WM_DELETE_WINDOW", self.toggle_canvas)
 
     def scale_to_image(self, event):
-        # Funkcija loga mērogošanai, lai tas atbilstu attēla izmēram, noklikšķinot
+        # Function to scale the window to fit the image size when clicked
         self.canvas_window.geometry("{}x{}".format(self.pcb_width, self.pcb_height))
 
     def on_treeview_click(self, event):
-        # Funkcija, lai apstrādātu klikšķu notikumus Treeview
+        # Function to handle click events on the Treeview
         item = self.treeview.selection()[0]
         index = self.treeview.index(item)
         component = self.components[index]
         self.refresh_canvas(component)
 
     def refresh_canvas(self, component=None):
-        # Funkcija displeja atsvaidzināšanai, pamatojoties uz atlasīto komponentu
+        # Function to refresh the display based on the selected component
         self.canvas.delete("highlight")
         if component:
             x, y = self.apply_transformations(component['x'], component['y'])
-            # Zīmē marķieri uz attēla
+            # Draw marker on the image
             marker_color = self.marker_color.get()
             marker_size = self.marker_size.get()
             marker_shape = self.marker_shape.get()
@@ -198,10 +198,10 @@ class PCBTool(tk.Tk):
                 self.canvas.create_rectangle(x - marker_size, y - marker_size, x + marker_size, y + marker_size, outline=marker_color, width=2, tags="highlight")
                 self.canvas.create_oval(x - 2, y - 2, x + 2, y + 2, fill=marker_color, outline=marker_color, tags="highlight")
                 self.canvas.create_line(x - marker_size, y - marker_size, x - marker_size, y + marker_size, fill=marker_color, tags="highlight")
-            # Šeit var pievienot citus marķiera veidus, ja ir vajadzība
+            # Other marker shapes can be added here if needed
 
     def apply_transformations(self, x, y):
-        # Funkcija mērogošanas, nobīdes, pagriešanas un spoguļošanas transformāciju pielietošanai
+        # Function to apply scaling, offset, rotation, and mirroring transformations
         x_scaled = x * self.scale_x.get()
         y_scaled = y * self.scale_y.get()
         x_offset = x_scaled + self.offset_x.get()
@@ -217,7 +217,7 @@ class PCBTool(tk.Tk):
         return x_mirror, y_mirror
 
     def export_spreadsheet(self):
-        # Funkcija komponentu datu eksportēšanai uz izklājlapu
+        # Function to export component data to a spreadsheet
         filename = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel Files", "*.xlsx")])
         if filename:
             with open(filename, 'w', newline='') as csvfile:
